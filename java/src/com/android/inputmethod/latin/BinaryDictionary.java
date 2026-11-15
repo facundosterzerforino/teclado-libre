@@ -111,7 +111,38 @@ public class BinaryDictionary extends Dictionary {
             int[] inputCodes, int inputCodesLength, char[] outputChars, int[] frequencies,
             int maxWordLength, int maxBigrams, int maxAlternatives);
 
+    /**
+     * Teclado Libre: map a single uncompressed dictionary straight from the APK.
+     * Mapped pages are clean and file-backed, so the kernel can reclaim them
+     * instead of keeping a private anonymous copy. Returns false to fall back.
+     */
+    private final boolean mapDictionary(Context context, int[] resId) {
+        if (resId.length != 1) return false;
+        android.content.res.AssetFileDescriptor afd = null;
+        java.io.FileInputStream in = null;
+        try {
+            afd = context.getResources().openRawResourceFd(resId[0]);
+            if (afd == null) return false;
+            in = new java.io.FileInputStream(afd.getFileDescriptor());
+            ByteBuffer mapped = in.getChannel().map(java.nio.channels.FileChannel.MapMode.READ_ONLY,
+                    afd.getStartOffset(), afd.getLength());
+            int dict = openNative(mapped, TYPED_LETTER_MULTIPLIER, FULL_WORD_FREQ_MULTIPLIER);
+            if (dict == 0) return false;
+            mNativeDictDirectBuffer = mapped;
+            mNativeDict = dict;
+            mDictLength = (int) afd.getLength();
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "Could not map dictionary, copying instead", e);
+            return false;
+        } finally {
+            try { if (in != null) in.close(); } catch (IOException e) { }
+            try { if (afd != null) afd.close(); } catch (IOException e) { }
+        }
+    }
+
     private final void loadDictionary(Context context, int[] resId) {
+        if (mapDictionary(context, resId)) return;
         InputStream[] is = null;
         try {
             // merging separated dictionary into one if dictionary is separated

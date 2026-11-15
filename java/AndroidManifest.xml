@@ -1,18 +1,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        package="com.android.inputmethod.latin">
+        package="com.android.inputmethod.latin"
+        android:versionCode="1" android:versionName="2.3.6-es1">
+
+    <uses-sdk android:minSdkVersion="9" android:targetSdkVersion="10" />
 
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.READ_USER_DICTIONARY" />
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
-    <application android:label="@string/english_ime_name"
-            android:backupAgent="LatinIMEBackupAgent"
+    <application android:label="Teclado Libre"
+            android:backupAgent="com.android.inputmethod.latin.LatinIMEBackupAgent"
             android:killAfterRestore="false">
 
-        <service android:name="LatinIME"
-                android:label="@string/english_ime_name"
+        <service android:name="com.android.inputmethod.latin.LatinIME"
+                android:label="Teclado Libre"
                 android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>
                 <action android:name="android.view.InputMethod" />
@@ -20,19 +22,19 @@
             <meta-data android:name="android.view.im" android:resource="@xml/method" />
         </service>
 
-        <activity android:name="LatinIMESettings" android:label="@string/english_ime_settings">
+        <activity android:name="com.android.inputmethod.latin.LatinIMESettings" android:label="@string/english_ime_settings">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
             </intent-filter>
         </activity>
 
-        <activity android:name="LatinIMEDebugSettings" android:label="@string/english_ime_debug_settings">
+        <activity android:name="com.android.inputmethod.latin.LatinIMEDebugSettings" android:label="@string/english_ime_debug_settings">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
             </intent-filter>
         </activity>
 
-        <activity android:name="InputLanguageSelection"
+        <activity android:name="com.android.inputmethod.latin.InputLanguageSelection"
                 android:label="@string/language_selection_title">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

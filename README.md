@@ -22,10 +22,15 @@ AOSP `LatinIME` at tag `android-2.3.6_r1` (commit `ec622ced`), with:
   INTERNET permission. Kept: vibrate, user dictionary, contacts (local
   name suggestions).
 
-The APK reuses the phone's `/system/lib/libjni_latinime.so`, which exposes
-the same AOSP 2.3 JNI (`openNative`, `getSuggestionsNative`, ...), so no NDK
-build is needed. This only works on Android 2.3 builds that include the
-stock LatinIME native library.
+- **Its own dictionary engine**: `native/` (the AOSP 2.3.6 JNI, unchanged) is
+  built by `native/build_native.py` with the NDK r10e (GCC 4.9, android-9, no
+  ndk-build). The result, `lib/armeabi-v7a/libjni_latinime.so` (13 KB, needs
+  only `libc`, bionic's tiny `libstdc++` and `libm`), is packed in the APK.
+  Android loads the app's copy first, so the keyboard no longer depends on the
+  phone maker's `/system/lib/libjni_latinime.so`. On the XT550 that file was
+  deleted after the change; checked with `/proc/<pid>/maps` and by typing
+  `cancion` -> `canción`, `manana` -> `mañana`.
+  - Version es1 used the phone's library (same JNI).
 
 ## Measured on a Motorola XT550 (Android 2.3.6)
 
@@ -49,7 +54,7 @@ Small, device-specific measurements, not a general benchmark.
 python build.py --jdk JDK_HOME --build-tools BUILD_TOOLS_30 \
   --android-jar android-10/android.jar \
   --keystore /outside/repo/key.jks --storepass-file /outside/repo/pass \
-  [--wordlist es_wordlist.combined.gz --max-words 60000]
+  --ndk android-ndk-r10e [--wordlist es_wordlist.combined.gz --max-words 60000]
 python -m unittest discover -s tests
 ```
 

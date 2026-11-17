@@ -3,14 +3,15 @@
 
 Uses explicit local tools only: JDK, Android build-tools (aapt, zipalign, d8,
 apksigner) and the API 10 android.jar. Signing key and password file must be
-outside this repository. The APK reuses the device's /system/lib/libjni_latinime.so
-(same AOSP 2.3 JNI), so no NDK is needed.
+outside this repository. The dictionary engine (native/, AOSP 2.3.6 JNI) is built
+with the NDK r10e by native/build_native.py and packed in the APK, so the
+keyboard no longer needs the phone maker's /system/lib/libjni_latinime.so.
 """
-import argparse, hashlib, os, pathlib, shutil, subprocess, zipfile
+import argparse, hashlib, os, pathlib, shutil, subprocess, sys, zipfile
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    for a in ('--jdk', '--build-tools', '--android-jar', '--keystore', '--storepass-file'):
+    for a in ('--jdk', '--build-tools', '--android-jar', '--keystore', '--storepass-file', '--ndk'):
         p.add_argument(a, required=True)
     p.add_argument('--alias', default='music')
     p.add_argument('--wordlist', help='AOSP es_wordlist.combined.gz; regenerates raw-es/main.dict')
@@ -44,8 +45,17 @@ def main():
     unsigned, aligned, apk = out / 'unsigned.apk', out / 'aligned.apk', out / 'Teclado-Libre.apk'
     # Store the dictionary uncompressed (no inflate buffer at load) and keep only es/en and mdpi resources.
     run(aapt, 'package', '-f', '-0', 'dict', '-c', 'es,en,mdpi', *common, '-F', unsigned)
+    sys.path.insert(0, str(root / 'native'))
+    import build_native
+    libdir = build_native.build(a.ndk, out / 'native')
+    def add(z, path, name):  # fixed timestamp: the same sources give the same APK
+        info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        z.writestr(info, path.read_bytes())
     with zipfile.ZipFile(unsigned, 'a', zipfile.ZIP_DEFLATED) as z:
-        z.write(out / 'dex/classes.dex', 'classes.dex')
+        add(z, out / 'dex/classes.dex', 'classes.dex')
+        for so in sorted(libdir.rglob('*.so')):
+            add(z, so, so.relative_to(libdir.parent).as_posix())  # lib/armeabi-v7a/libjni_latinime.so
     run(align, '-f', '4', unsigned, aligned)
     run(java, '-jar', signer, 'sign', '--ks', a.keystore, '--ks-key-alias', a.alias, '--ks-pass', 'file:' + a.storepass_file,
         '--min-sdk-version', '9', '--v1-signing-enabled', 'true', '--v2-signing-enabled', 'false', '--v3-signing-enabled', 'false',
